@@ -11,19 +11,19 @@ intersections = ["A (Levent)", "B (Besiktas)", "C (Kavacik)", "D (Kadikoy)", "E 
 G.add_nodes_from(intersections)
 
 G.add_edges_from([
-    ("A (Levent)", "B (Besiktas)", {'weight': 10, 'yol_id': 'E5-Kopru'}),
-    ("A (Levent)", "C (Kavacik)", {'weight': 25, 'yol_id': 'Tem-Kavacik'}), 
-    ("B (Besiktas)", "D (Kadikoy)", {'weight': 15, 'yol_id': 'Besiktas-Sahil'}),
-    ("C (Kavacik)", "E (Atasehir)", {'weight': 10, 'yol_id': 'Tem-Kavacik'}), 
-    ("D (Kadikoy)", "E (Atasehir)", {'weight': 5, 'yol_id': 'Kadikoy-Merkez'}),
-    ("E (Atasehir)", "A (Levent)", {'weight': 30, 'yol_id': 'E5-Kopru'}) 
+    ("A (Levent)", "B (Besiktas)", {'weight': 10, 'road_id': 'E5-Bridge'}),
+    ("A (Levent)", "C (Kavacik)", {'weight': 25, 'road_id': 'Tem-Kavacik'}), 
+    ("B (Besiktas)", "D (Kadikoy)", {'weight': 15, 'road_id': 'Besiktas-Coast'}),
+    ("C (Kavacik)", "E (Atasehir)", {'weight': 10, 'road_id': 'Tem-Kavacik'}), 
+    ("D (Kadikoy)", "E (Atasehir)", {'weight': 5, 'road_id': 'Kadikoy-Center'}),
+    ("E (Atasehir)", "A (Levent)", {'weight': 30, 'road_id': 'E5-Bridge'}) 
 ])
 
 def dynamic_cost_calculator(u, v, data):
     """
-    Tells NetworkX to check Redis when calculating the cost (weight) of each edge.
+    Calculates the dynamic weight of an edge based on real-time Redis data.
     """
-    road_id = data.get('yol_id')
+    road_id = data.get('road_id')
     static_duration = data.get('weight') 
     
     redis_data = redis_client.hget(road_id, 'congestion_status')
@@ -46,7 +46,6 @@ def dynamic_cost_calculator(u, v, data):
 def find_dynamic_route(start_node, target_node):
     try:
         route = nx.dijkstra_path(G, start_node, target_node, weight=dynamic_cost_calculator)
-        
         total_duration = nx.dijkstra_path_length(G, start_node, target_node, weight=dynamic_cost_calculator)
         
         print(f"\n--- Dynamic Route Result ({time.strftime('%H:%M:%S')}) ---")
