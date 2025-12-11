@@ -1,7 +1,7 @@
 import networkx as nx
 import time
 import redis
-import random 
+import random
 
 redis_client = redis.Redis(host='localhost', port=6379, db=0)
 
@@ -24,10 +24,12 @@ def dynamic_cost_calculator(u, v, data):
     Calculates the dynamic weight of an edge based on real-time Redis data.
     """
     road_id = data.get('road_id')
-    static_duration = data.get('weight') 
-    
+    static_duration = data.get('weight')
+
     redis_data = redis_client.hget(road_id, 'congestion_status')
     
+    #SIMPLE ALGORITHM IS USED TO CALCULATE DURATION DYNAMICALLY
+    #FIND MORE COMPLEX ONE LATER!
     if redis_data:
         congestion = redis_data.decode('utf-8')
         
@@ -59,10 +61,11 @@ def find_dynamic_route(start_node, target_node):
         print(f"ERROR: No path found between {start_node} and {target_node}.")
         return None, None
 
-print("🗺️ Dynamic Route Calculator Started! (Exit: CTRL+C)")
+print("Dynamic Route Calculator Started! (Exit: CTRL+C)")
 try:
     while True:
         find_dynamic_route("A (Levent)", "E (Atasehir)")
         time.sleep(5) 
 except KeyboardInterrupt:
-    print("\n🛑 Route calculator stopped.")
+    print("\nRoute calculator stopped.")
+

@@ -5,8 +5,7 @@ from sklearn.preprocessing import MinMaxScaler, LabelEncoder
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense, Dropout
 
-# 1. Load Dataset
-print("⏳ Loading dataset...")
+print("Loading dataset.")
 df = pd.read_csv('traffic_dataset.csv')
 
 # 2. Preprocessing (Data Cleaning)
@@ -38,7 +37,7 @@ for i in range(len(features_scaled) - look_back):
 X, y = np.array(X), np.array(y)
 
 # 4. Build LSTM Model
-print("🧠 Building AI Model...")
+print("Building AI Model...")
 model = Sequential()
 # Layer 1: LSTM Memory Layer
 model.add(LSTM(units=50, return_sequences=True, input_shape=(X.shape[1], X.shape[2])))
@@ -54,7 +53,7 @@ model.add(Dense(units=1))
 model.compile(optimizer='adam', loss='mean_squared_error')
 
 # 5. Train Model
-print("🚀 Training Started... This might take a minute.")
+print("Training Started... This might take a minute.")
 model.fit(X, y, epochs=10, batch_size=32)
 
 # 6. Save Artifacts
@@ -63,6 +62,6 @@ joblib.dump(scaler_features, 'scaler_features.pkl')
 joblib.dump(scaler_target, 'scaler_target.pkl')
 joblib.dump(encoder, 'road_encoder.pkl')
 
-print("✅ Training Complete!")
-print("💾 Model saved as 'traffic_model.h5'")
-print("💾 Utilities saved as .pkl files")
+print("Training Complete!")
+print("Model saved as 'traffic_model.h5'")
+print("Utilities saved as .pkl files")

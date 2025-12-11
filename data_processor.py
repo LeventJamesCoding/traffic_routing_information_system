@@ -6,7 +6,7 @@ import time
 redis_client = redis.Redis(host='localhost', port=6379, db=0)
 
 consumer = KafkaConsumer(
-    'raw_traffic_data', 
+    'raw_traffic_data',
     bootstrap_servers=['localhost:9092'],
     api_version=(0, 10, 1), 
     auto_offset_reset='latest',
@@ -40,4 +40,4 @@ try:
         print(f"PROCESSED ({road_id}): Status: {status} -> Written to Redis.")
 
 except KeyboardInterrupt:
-    print("\n🛑 Data Processing Service stopped.")
+    print("\nData Processing Service stopped.")

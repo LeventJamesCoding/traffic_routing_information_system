@@ -9,7 +9,7 @@ producer = KafkaProducer(
     value_serializer=lambda x: json.dumps(x).encode('utf-8')
 )
 
-print("🚦 Traffic Simulator Started! (Press CTRL+C to exit)")
+print("Traffic Simulator Started! (Press CTRL+C to exit)")
 
 road_segments = ["E5-Bridge", "Tem-Kavacik", "Besiktas-Coast", "Kadikoy-Center"]
 
@@ -29,4 +29,4 @@ try:
         time.sleep(2)
 
 except KeyboardInterrupt:
-    print("\n🛑 Simulation stopped.")
+    print("\nSimulation stopped.")
