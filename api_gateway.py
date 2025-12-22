@@ -5,21 +5,19 @@ import json
 
 app = FastAPI()
 
-# 1. Enable CORS (React'in bağlanabilmesi için izin)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# 2. Redis Bağlantısı
 redis_client = redis.Redis(host='localhost', port=6379, db=0)
 
 @app.get("/")
 def read_root():
-    return {"status": "UrbanPulse API is Running 🚀"}
+    return {"status": "TrafficInfo API is Running"}
 
 @app.get("/traffic-data")
 def get_traffic_data():

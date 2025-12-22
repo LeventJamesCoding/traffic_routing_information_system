@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, AlertTriangle, Clock, Map as MapIcon } from 'lucide-react';
 import axios from 'axios';
-import { MapContainer, TileLayer, Polyline, Popup, Marker } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css'; // Harita stillerini yükle
+import { MapContainer, TileLayer, Polyline, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import './App.css';
+import './App.css'; // Yeni CSS dosyanı çağırır
 
-// Marker ikonlarını düzeltmek için (Leaflet React bug'ı için fix)
+// Leaflet Marker Fix (Bunu silme, harita ikonları için gerekli)
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png'),
@@ -14,170 +13,175 @@ L.Icon.Default.mergeOptions({
   shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
 });
 
+// --- RENK BELİRLEME FONKSİYONU ---
+const getRoadColor = (status) => {
+  if (status === 'ACCIDENT') return '#ffffff'; // Kaza: Bembeyaz (CSS ile yanıp sönecek)
+  if (status === 'LOCKED') return '#ff0055'; // Kırmızı (Kilit)
+  if (status === 'HEAVY') return '#ffcc00';  // Sarı (Yoğun)
+  return '#00ff88';                          // Yeşil (Normal)
+};
+
+// --- İSTANBUL KOORDİNATLARI ---
+const roadCoordinates = {
+  "E5-Bridge": [[41.045, 29.025], [41.042, 29.039], [41.030, 29.055]],
+  "Tem-Kavacik": [[41.092, 29.055], [41.093, 29.062], [41.091, 29.085]],
+  "Besiktas-Coast": [[41.036, 28.995], [41.042, 29.008], [41.048, 29.025]],
+  "Kadikoy-Center": [[40.991, 29.021], [40.9905, 29.029], [40.994, 29.038]],
+  "E5-Beylikduzu": [[41.002, 28.650], [40.998, 28.680], [40.995, 28.710]],
+  "Tem-Seyrantepe": [[41.095, 28.980], [41.100, 28.990], [41.105, 29.000]],
+  "Basin-Ekspres": [[41.020, 28.810], [41.040, 28.815], [41.060, 28.820]],
+  "Sahil-Kennedy": [[40.995, 28.900], [41.000, 28.950], [41.010, 28.980]],
+  "Bagdat-Caddesi": [[40.980, 29.050], [40.970, 29.060], [40.960, 29.070]],
+  "Minibus-Yolu": [[40.985, 29.055], [40.975, 29.070], [40.965, 29.090]],
+  "Levent-Buyukdere": [[41.070, 29.010], [41.080, 29.015], [41.090, 29.020]],
+  "Haliç-Bridge": [[41.040, 28.940], [41.045, 28.945], [41.050, 28.950]]
+};
+
 function App() {
   const [trafficData, setTrafficData] = useState([]);
-  const [logs, setLogs] = useState([]);
-  const [systemStatus, setSystemStatus] = useState("OFFLINE");
-
+  
   // 1. Veri Çekme Motoru
   useEffect(() => {
     const fetchData = async () => {
       try {
         const response = await axios.get('http://127.0.0.1:8000/traffic-data');
-        const data = response.data;
-        setTrafficData(data);
-        setSystemStatus("ONLINE");
-        
-        if (data.length > 0) {
-          const latest = data[Math.floor(Math.random() * data.length)];
-          addLog(`${latest.road_id}: ${latest.congestion_status} (${latest.speed} km/h)`);
-        }
+        setTrafficData(response.data);
       } catch (error) {
-        setSystemStatus("CONNECTION ERROR");
+        console.error("Connection Error:", error);
       }
     };
 
-    fetchData();
-    const interval = setInterval(fetchData, 2000);
+    fetchData(); // İlk açılışta çek
+    const interval = setInterval(fetchData, 2000); // Her 2 saniyede bir güncelle
     return () => clearInterval(interval);
   }, []);
 
-  const addLog = (message) => {
-    const time = new Date().toLocaleTimeString();
-    setLogs(prev => [`[${time}] ${message}`, ...prev.slice(0, 9)]);
-  };
+  // Tahminleri çekip basit bir objeye çevirelim (Haritada göstermek için)
+  const predictions = {};
+  trafficData.forEach(item => {
+    predictions[item.road_id] = item.predicted_speed;
+  });
 
-  const getRoadColor = (status) => {
-    if (status === 'LOCKED') return '#ff0055'; // Kırmızı
-    if (status === 'HEAVY') return '#ffcc00';  // Sarı
-    return '#00ff88';                          // Yeşil
-  };
-
-  // GERÇEK İSTANBUL KOORDİNATLARI (Enlem, Boylam)
-  const roadCoordinates = {
-    "E5-Bridge": [
-      [41.0665, 29.0140], // Zincirlikuyu Sapağı
-      [41.0600, 29.0220], // Balmumcu
-      [41.0490, 29.0300], // Ortaköy Viyadüğü
-      [41.0450, 29.0340], // 15 Temmuz Köprüsü (Avrupa)
-      [41.0420, 29.0390], // 15 Temmuz Köprüsü (Asya)
-      [41.0380, 29.0450], // Beylerbeyi Çıkışı
-      [41.0300, 29.0550]  // Altunizade
-    ],
-    "Tem-Kavacik": [
-      [41.0900, 29.0400], // Baltalimanı
-      [41.0920, 29.0550], // FSM Köprüsü Giriş
-      [41.0930, 29.0620], // FSM Köprüsü Orta
-      [41.0920, 29.0700], // FSM Çıkış
-      [41.0910, 29.0850], // Kavacık Sapağı
-      [41.0950, 29.1000]  // Beykoz Yolu
-    ],
-    "Besiktas-Coast": [
-      [41.0360, 28.9950], // Dolmabahçe Sarayı
-      [41.0400, 29.0020], // Beşiktaş İskelesi
-      [41.0430, 29.0090], // Çırağan Sarayı
-      [41.0460, 29.0160], // Yıldız Parkı Altı
-      [41.0480, 29.0250]  // Ortaköy Meydan
-    ],
-    "Kadikoy-Center": [
-      [40.9910, 29.0210], // Kadıköy Rıhtım
-      [40.9900, 29.0250], // Çarşı İçi
-      [40.9905, 29.0290], // Boğa Heykeli
-      [40.9920, 29.0330], // Söğütlüçeşme Caddesi
-      [40.9940, 29.0380]  // Metrobüs Durağı
-    ]
-  };
-
-  // İstatistikler
-  const avgSpeed = trafficData.length > 0 
-    ? Math.floor(trafficData.reduce((acc, curr) => acc + curr.speed, 0) / trafficData.length) 
-    : 0;
-  const mainStatus = trafficData.some(d => d.congestion_status === 'LOCKED') ? 'CRITICAL' : 'NORMAL';
-
-  return (  
+  return (
     <div className="dashboard-container">
-      {/* HEADER */}
-      <header className="top-bar">
-        <div className="logo-section">
-          <Activity className="icon-pulse" color={systemStatus === 'ONLINE' ? "#00ff88" : "red"} />
-          <h1>TRAFFIC CONTROL SYSTEM</h1>
-        </div>
-        <div style={{color: systemStatus === 'ONLINE' ? '#00ff88' : 'red', fontWeight: 'bold'}}>
-          {systemStatus}
+      
+      {/* --- 1. HEADER (ÜST KISIM) --- */}
+      {/* --- 1. HEADER (DÜZELTİLDİ) --- */}
+      <header className="header">
+        <div style={{display:'flex', alignItems:'center', gap:'15px'}}>
+          <span style={{fontSize:'2rem'}}>🚦</span>
+          <div>
+            <h1 style={{margin:0}}>TRAFFIC CONTROL SYSTEM</h1> 
+          </div>
         </div>
       </header>
 
-      {/* MAIN CONTENT */}
-      <div className="main-content">
-        
-        {/* LEFT PANEL */}
-        <div className="panel left-panel">
-          <div className="panel-header"><Clock size={18} /> LIVE DATA STREAM</div>
-          <div className="log-container">
-            {logs.map((log, index) => (
-              <p key={index} className="log-item" style={{color: log.includes('LOCKED') ? '#ff0055' : '#ccc'}}>
-                {log}
-              </p>
-            ))}
-          </div>
-        </div>
-
-        {/* MIDDLE PANEL: LIVE MAP */}
-        <div className="panel map-panel">
-          <MapContainer center={[41.045, 29.030]} zoom={12} style={{ height: "100%", width: "100%", background: '#0a0a12' }}>
-            
-            {/* Dark Mode Harita Katmanı (CartoDB Dark Matter) */}
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-            />
-
-            {/* Yolları Çiz */}
-            {trafficData.map((road) => (
-              roadCoordinates[road.road_id] && (
-                <Polyline 
-                  key={road.road_id}
-                  positions={roadCoordinates[road.road_id]}
-                  pathOptions={{ 
-                    color: getRoadColor(road.congestion_status), 
-                    weight: 6, // Çizgi kalınlığı
-                    opacity: 0.8 
-                  }}
-                >
-                  <Popup>
-                    <div style={{color: 'black'}}>
-                      <strong>{road.road_id}</strong><br/>
-                      Speed: {road.speed} km/h<br/>
-                      Status: {road.congestion_status}<br/>
-                      AI Prediction: {road.predicted_speed} km/h
-                    </div>
-                  </Popup>
-                </Polyline>
-              )
-            ))}
-          </MapContainer>
-        </div>
-
-        {/* RIGHT PANEL */}
-        <div className="panel right-panel">
-          <div className="panel-header"><AlertTriangle size={18} /> NETWORK STATUS</div>
-          <div className="stat-card">
-            <h4>AVG SPEED</h4>
-            <div className="stat-value">{avgSpeed} <span className="unit">km/h</span></div>
-          </div>
-          <div className="stat-card">
-            <h4>CONGESTION</h4>
-            <div className={`stat-value ${mainStatus === 'CRITICAL' ? 'critical' : ''}`} style={{color: mainStatus==='CRITICAL' ? '#ff0055' : '#00ff88'}}>
-              {mainStatus}
+      {/* --- 2. SOL PANEL (CANLI LOGLAR) --- */}
+      <div className="panel">
+        <div className="panel-title">📡 LIVE SENSOR STREAM</div>
+        <div className="log-container">
+          {/* Veriyi ters çevirip (en yeni en üstte) listeliyoruz */}
+          {trafficData.slice().reverse().map((data, index) => (
+            <div key={index} className={`log-item log-${data.congestion_status}`}>
+              <div style={{display:'flex', justifyContent:'space-between', marginBottom:'5px'}}>
+                <span style={{fontWeight:'bold', color:'#fff'}}>{data.road_id}</span>
+                <span style={{fontSize:'0.8rem', opacity:0.7}}>
+                  {new Date(data.timestamp * 1000).toLocaleTimeString()}
+                </span>
+              </div>
+              <div style={{fontSize:'0.9rem', display:'flex', justifyContent:'space-between'}}>
+                <span>SPD: {Math.floor(data.speed)} km/h</span>
+                <span>AI PRED: {data.predicted_speed} km/h</span>
+              </div>
             </div>
-          </div>
-          <div className="stat-card">
-            <h4>ACTIVE SENSORS</h4>
-            <div className="stat-value">{trafficData.length}</div>
-          </div>
+          ))}
+        </div>
+      </div>
+
+      {/* --- 3. ORTA PANEL (HARİTA) --- */}
+      <div className="map-container">
+        <MapContainer center={[41.045, 29.030]} zoom={12} style={{ height: "100%", width: "100%", background: '#000' }}>
+          {/* Karanlık Harita Katmanı */}
+          <TileLayer
+            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            attribution='&copy; <a href="https://carto.com/attributions">CARTO</a>'
+          />
+          
+          {/* Yolları Çiz */}
+          {Object.entries(roadCoordinates).map(([roadName, coords]) => {
+            // O yolun verisini bul
+            const roadData = trafficData.find(d => d.road_id === roadName);
+            // Veri varsa rengini al, yoksa gri yap
+            const color = roadData ? getRoadColor(roadData.congestion_status) : '#333';
+            // Kaza varsa çizgiyi kalınlaştır
+            const weight = roadData && roadData.congestion_status === 'ACCIDENT' ? 8 : 5;
+
+            return (
+              <Polyline 
+                key={roadName} 
+                positions={coords} 
+                color={color} 
+                weight={weight}
+                opacity={0.9} 
+              >
+                <Popup>
+                  <div style={{color:'#000', textAlign:'center'}}>
+                    <strong style={{fontSize:'1.1rem'}}>{roadName}</strong><hr/>
+                    Current: <b>{roadData ? Math.floor(roadData.speed) : '?'} km/h</b><br/>
+                    Status: <b>{roadData ? roadData.congestion_status : 'OFFLINE'}</b><br/>
+                    <br/>
+                    🤖 AI Prediction (15m):<br/>
+                    <b style={{fontSize:'1.2rem', color:'#007bff'}}>
+                      {roadData ? roadData.predicted_speed : '?'} km/h
+                    </b>
+                  </div>
+                </Popup>
+              </Polyline>
+            );
+          })}
+        </MapContainer>
+      </div>
+
+      {/* --- 4. SAĞ PANEL (İSTATİSTİKLER) --- */}
+      <div className="panel">
+        <div className="panel-title">⚠️ NETWORK STATUS</div>
+        
+        {/* Ortalama Hız */}
+        <div className="stat-card">
+          <span className="stat-label">AVG NET SPEED</span>
+          <span className="stat-value color-green">
+            {trafficData.length > 0 
+              ? Math.floor(trafficData.reduce((acc, curr) => acc + curr.speed, 0) / trafficData.length) 
+              : 0}
+            <span style={{fontSize:'1.5rem', marginLeft:'5px'}}>km/h</span>
+          </span>
         </div>
 
+        {/* Kritik Durum Göstergesi */}
+        <div className="stat-card">
+          <span className="stat-label">CONGESTION LEVEL</span>
+          <span className={`stat-value ${
+            trafficData.some(d => d.congestion_status === 'LOCKED' || d.congestion_status === 'ACCIDENT') 
+            ? 'color-red' 
+            : 'color-green'
+          }`}>
+            {trafficData.some(d => d.congestion_status === 'ACCIDENT') 
+              ? 'ACCIDENT!' 
+              : trafficData.some(d => d.congestion_status === 'LOCKED') 
+                ? 'CRITICAL' 
+                : 'STABLE'}
+          </span>
+        </div>
+
+        {/* Aktif Sensör Sayısı */}
+        <div className="stat-card">
+          <span className="stat-label">ACTIVE SENSORS</span>
+          <span className="stat-value" style={{color:'#fff'}}>
+            {trafficData.length} / 12
+          </span>
+        </div>
       </div>
+
     </div>
   );
 }

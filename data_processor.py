@@ -1,7 +1,7 @@
 import json
-from kafka import KafkaConsumer
 import redis
 import time
+from kafka import KafkaConsumer
 
 redis_client = redis.Redis(host='localhost', port=6379, db=0)
 

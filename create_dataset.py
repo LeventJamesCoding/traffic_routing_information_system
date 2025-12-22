@@ -1,44 +1,57 @@
 import pandas as pd
-import numpy as np
 import random
-import datetime
+import joblib
+from sklearn.preprocessing import LabelEncoder
 
-RECORD_COUNT = 10000  
-START_DATE = datetime.now() - datetime.timedelta(days=30) 
-
-road_segments = ["E5-Bridge", "Tem-Kavacik", "Besiktas-Coast", "Kadikoy-Center"]
+# 1. Genişletilmiş Yol Listesi (12 Yol)
+ROADS = [
+    "E5-Bridge", "Tem-Kavacik", "Besiktas-Coast", "Kadikoy-Center",
+    "E5-Beylikduzu", "Tem-Seyrantepe", "Basin-Ekspres", "Sahil-Kennedy",
+    "Bagdat-Caddesi", "Minibus-Yolu", "Levent-Buyukdere", "Haliç-Bridge"
+]
 
 data = []
 
-print("Generating historical traffic data... Please wait.")
+print("Generating Synthetic Traffic Data with Correct Columns...")
 
-for i in range(RECORD_COUNT):
-    current_time = START_DATE + datetime.timedelta(minutes=i*5)
-    hour = current_time.hour
-    road = random.choice(road_segments)
+# 2. 10.000 Satırlık Veri Üret
+for _ in range(10000):
+    road = random.choice(ROADS)
+    hour = random.randint(0, 23)
     
-    if (7 <= hour <= 9) or (17 <= hour <= 19):
-        speed = random.randint(10, 40)
-        density = random.randint(7, 10) 
-    elif (0 <= hour <= 5):
-        speed = random.randint(80, 120)
-        density = random.randint(1, 3) 
+    # Mantıklı Trafik Kuralları (Sabah/Akşam yoğunluğu)
+    if (7 <= hour <= 10) or (17 <= hour <= 20):
+        # %70 ihtimalle yoğun
+        if random.random() < 0.7:
+            speed = random.randint(5, 30)
+            status = random.choice(['LOCKED', 'HEAVY'])
+        else:
+            speed = random.randint(30, 60)
+            status = 'NORMAL'
     else:
-        speed = random.randint(40, 90)
-        density = random.randint(3, 7) 
-
+        # Gece/Öğlen genelde açık
+        if random.random() < 0.1: # Arada kaza vs. olsun
+            speed = random.randint(10, 40)
+            status = 'HEAVY'
+        else:
+            speed = random.randint(70, 120)
+            status = 'NORMAL'
+            
+    # train_model.py'nin beklediği SÜTUN İSİMLERİ BURADA:
     data.append({
-        "timestamp": current_time,
-        "hour": hour, #feature for ai
         "road_id": road,
+        "hour": hour,
         "speed": speed,
-        "density": density
+        "congestion_status": status  # <-- İşte aranan sütun bu!
     })
 
+# 3. DataFrame Oluştur ve Kaydet
 df = pd.DataFrame(data)
+df.to_csv('traffic_dataset.csv', index=False)
+print("✅ traffic_dataset.csv created successfully!")
 
-file_name = "traffic_dataset.csv"
-df.to_csv(file_name, index=False)
-
-print(f"Success! Dataset created: '{file_name}'")
-print(f"Data Preview:\n{df.head()}")
+# 4. Encoder'ı da burada oluşturup kaydedelim (Garanti olsun)
+encoder = LabelEncoder()
+df['road_encoded'] = encoder.fit_transform(df['road_id'])
+joblib.dump(encoder, 'road_encoder.pkl')
+print("✅ road_encoder.pkl updated!")

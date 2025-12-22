@@ -3,33 +3,43 @@ import redis
 import joblib
 import numpy as np
 import pandas as pd
-from tensorflow import load_model
 from datetime import datetime
+# ✅ DOĞRU IMPORT (Tek sefer ve doğru yerden)
+from tensorflow.keras.models import load_model 
 
-print("Loading AI Model and Scalers...")
-model = load_model('traffic_model.h5')
+print("Loading Hybrid AI Models and Scalers...")
+
+# --- GÜNCELLEME: ÇİFT MOTORLU YAPI ---
+try:
+    model_lstm = load_model('lstm_model.h5')
+    model_gru = load_model('gru_model.h5')
+    print("✅ LSTM & GRU Models Loaded Successfully.")
+except:
+    print("⚠️ HATA: Yeni modeller bulunamadı! Lütfen önce 'python train_model.py' çalıştır.")
+    exit()
+
 scaler_features = joblib.load('scaler_features.pkl')
 scaler_target = joblib.load('scaler_target.pkl')
 encoder = joblib.load('road_encoder.pkl')
 
 redis_client = redis.Redis(host='localhost', port=6379, db=0)
 
-road_segments = ["E5-Bridge", "Tem-Kavacik", "Besiktas-Coast", "Kadikoy-Center"]
+# --- GÜNCELLEME: TÜM YOLLAR (12 ADET) ---
+road_segments = [
+    "E5-Bridge", "Tem-Kavacik", "Besiktas-Coast", "Kadikoy-Center",
+    "E5-Beylikduzu", "Tem-Seyrantepe", "Basin-Ekspres", "Sahil-Kennedy",
+    "Bagdat-Caddesi", "Minibus-Yolu", "Levent-Buyukdere", "Haliç-Bridge"
+]
 
-print("AI Predictor Service Started! Watching Blackboard...")
+print("🧠 AI Hybrid Predictor Service Started! Watching Blackboard...")
 
-# Helper to maintain history for LSTM (We need 3 past steps)
-# Dictionary format: {'E5-Bridge': [[hour, road, density], ...]}
 history_buffer = {road: [] for road in road_segments}
 
 def prepare_input(road_id, hour, density):
-    # Convert 'road_id' to number using the saved encoder
-    # Note: We use a try-except block in case of unseen labels, but here we cover all roads.
     try:
         road_encoded = encoder.transform([road_id])[0]
     except ValueError:
-        road_encoded = 0 # Fallback
-        
+        road_encoded = 0 
     return [hour, road_encoded, density]
 
 try:
@@ -46,7 +56,9 @@ try:
             try:
                 status = redis_data.get(b'congestion_status').decode('utf-8')
                 
-                if status == 'LOCKED': density = 9
+                # Kaza durumunu da yoğunluk olarak algılasın
+                if status == 'ACCIDENT': density = 10
+                elif status == 'LOCKED': density = 9
                 elif status == 'HEAVY': density = 6
                 else: density = 2
                 
@@ -64,18 +76,23 @@ try:
                 input_scaled = scaler_features.transform(input_seq)
                 input_reshaped = np.array([input_scaled])
                 
-                prediction_scaled = model.predict(input_reshaped, verbose=0)
+                # --- HİBRİT TAHMİN (ENSEMBLE) ---
+                pred_lstm = model_lstm.predict(input_reshaped, verbose=0)
+                pred_gru = model_gru.predict(input_reshaped, verbose=0)
                 
-                predicted_speed = scaler_target.inverse_transform(prediction_scaled)[0][0]
+                # İki modelin ortalamasını al (Daha güvenilir sonuç)
+                avg_prediction = (pred_lstm + pred_gru) / 2
+                
+                predicted_speed = scaler_target.inverse_transform(avg_prediction)[0][0]
                 
                 redis_client.hset(road, "predicted_speed", f"{predicted_speed:.1f}")
                 
-                print(f"({road}) Current Status: {status} -> AI Predicts Speed in 15min: {predicted_speed:.1f} km/h")
+                print(f"({road}) Status: {status} -> Hybrid AI Predicts: {predicted_speed:.1f} km/h")
                 
             except Exception as e:
                 print(f"Error processing {road}: {e}")
 
-        time.sleep(5)
+        time.sleep(2) # Tahmin sıklığı
 
 except KeyboardInterrupt:
     print("\nAI Predictor stopped.")
