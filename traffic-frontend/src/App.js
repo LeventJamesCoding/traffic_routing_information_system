@@ -1,3 +1,4 @@
+//Line -> 302
 // import React, { useState, useEffect } from 'react';
 // import axios from 'axios';
 // import { MapContainer, TileLayer, Polyline, Popup } from 'react-leaflet';
@@ -368,22 +369,15 @@ const ROAD_COORDINATES = {
     [41.040, 29.000], [41.045, 29.015], [41.050, 29.030], [41.060, 29.040], // Ortaköy
     [41.075, 29.045], [41.090, 29.050], [41.110, 29.055] // Sarıyer Yönü
   ],
-
-  // --- BRIDGES (KÖPRÜLER) ---
-  
   "Bridge-15-July": [
     [41.045, 29.025], [41.046, 29.032], [41.047, 29.038], [41.045, 29.042]
   ],
   "Bridge-FSM": [
     [41.091, 29.055], [41.092, 29.065], [41.091, 29.075], [41.090, 29.085]
   ],
-
-  // --- ASIAN SIDE (ANADOLU YAKASI) ---
-
-  // E5 CONNECTIONS
   "E5-Altunizade-Uzuncayir": [
     [41.045, 29.042], [41.035, 29.045], [41.020, 29.050], [41.010, 29.052], 
-    [41.000, 29.055] // Uzunçayır
+    [41.000, 29.055] 
   ],
   "E5-Uzuncayir-Bostanci": [
     [41.000, 29.055], [40.990, 29.065], [40.980, 29.080], [40.970, 29.095], 
@@ -394,7 +388,6 @@ const ROAD_COORDINATES = {
     [40.880, 29.230]
   ],
 
-  // TEM CONNECTIONS
   "Tem-Kavacik-Umraniye": [
     [41.090, 29.085], [41.085, 29.095], [41.070, 29.110], [41.050, 29.120], 
     [41.020, 29.130]
@@ -403,7 +396,6 @@ const ROAD_COORDINATES = {
     [41.020, 29.130], [41.000, 29.125], [40.990, 29.120]
   ],
 
-  // ASIAN COAST
   "Coast-Uskudar-Harem": [
     [41.025, 29.015], [41.020, 29.010], [41.010, 29.008], [41.000, 29.012]
   ],
@@ -415,13 +407,12 @@ const ROAD_COORDINATES = {
 
 const LOCATION_LIST = Object.keys(ROAD_COORDINATES);
 
-// Helper: Determine Color based on Congestion Status
 const getRoadColor = (status) => {
   switch (status) {
-    case 'ACCIDENT': return '#ff0000'; // Bright Red
-    case 'LOCKED': return '#d90429';   // Deep Red
-    case 'HEAVY': return '#ff8c00';    // Orange
-    default: return '#2dcc70';         // Green
+    case 'ACCIDENT': return '#ff0000'; 
+    case 'LOCKED': return '#d90429';   
+    case 'HEAVY': return '#ff8c00';    
+    default: return '#2dcc70';         
   }
 };
 
@@ -430,13 +421,11 @@ function App() {
   const [trafficData, setTrafficData] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Route Planner State
   const [startPoint, setStartPoint] = useState('E5-Beylikduzu-Avcilar');
   const [endPoint, setEndPoint] = useState('E5-Bostanci-Pendik');
   const [calculatedRoute, setCalculatedRoute] = useState(null);
   const [routeError, setRouteError] = useState(null);
 
-  // --- DATA FETCHING ---
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -452,7 +441,6 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // --- HANDLERS ---
   const handleCalculateRoute = async () => {
     setRouteError(null);
     setCalculatedRoute(null);
@@ -474,7 +462,6 @@ function App() {
     }
   };
 
-  // Filter Road List based on Search
   const displayRoads = LOCATION_LIST.filter(road => 
     road.toLowerCase().includes(searchTerm.toLowerCase())
   );
