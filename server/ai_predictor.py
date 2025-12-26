@@ -4,18 +4,20 @@ import joblib
 import numpy as np
 import pandas as pd
 from datetime import datetime
-# ✅ DOĞRU IMPORT (Tek sefer ve doğru yerden)
-from tensorflow.keras.models import load_model 
+from keras.models import load_model 
 
 print("Loading Hybrid AI Models and Scalers...")
 
-# --- GÜNCELLEME: ÇİFT MOTORLU YAPI ---
+# --- UPDATE: BETTER ERROR HANDLING ---
 try:
     model_lstm = load_model('lstm_model.h5')
     model_gru = load_model('gru_model.h5')
     print("✅ LSTM & GRU Models Loaded Successfully.")
-except:
-    print("⚠️ HATA: Yeni modeller bulunamadı! Lütfen önce 'python train_model.py' çalıştır.")
+except Exception as e:
+    # Print the REAL error message
+    print(f"❌ CRITICAL ERROR: Could not load models.")
+    print(f"Details: {e}")
+    print("👉 HINT: Run 'python train_model.py' to regenerate model files.")
     exit()
 
 scaler_features = joblib.load('scaler_features.pkl')
